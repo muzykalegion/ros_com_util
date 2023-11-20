@@ -3,3 +3,4 @@ install/
 log/
 scripts/__pycache__
 .vscode/
+.vscode/settings.json
