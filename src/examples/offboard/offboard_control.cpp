@@ -33,9 +33,8 @@
 /**
  * @brief Offboard control example
  * @file offboard_control.cpp
- * @addtogroup examples
- * @author Mickey Cowden <info@cowden.tech>
- * @author Nuno Marques <nuno.marques@dronesolutions.io>
+ * @addtogroup utility
+ * @author Muzyka Legion <muzyka.legion@gmail.com>
  */
 
 #include <px4_msgs/msg/offboard_control_mode.hpp>
