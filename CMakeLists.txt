@@ -60,6 +60,11 @@ add_executable(offboard_control src/examples/offboard/offboard_control.cpp)
 ament_target_dependencies(offboard_control rclcpp px4_msgs)
 install(TARGETS offboard_control DESTINATION lib/${PROJECT_NAME})
 
+# examples/offboard/offboard_calibration
+add_executable(offboard_calibration src/examples/offboard/offboard_calibration.cpp)
+ament_target_dependencies(offboard_calibration rclcpp px4_msgs)
+install(TARGETS offboard_calibration DESTINATION lib/${PROJECT_NAME})
+
 
 ############
 # Install ##
