@@ -16,5 +16,5 @@ Run `ros2 launch ros_com_util sensor_combined_listener.launch.py`
 
 ## Questions and troubleshooting
 
-[Mailto author](mailto:muzyka.legion@gmail.com)
+[Create an issue](https://github.com/muzykalegion/ros_com_util/issues/new)
 
