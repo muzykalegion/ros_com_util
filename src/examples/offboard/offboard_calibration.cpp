@@ -45,14 +45,20 @@ public:
 
 		subscription_ =
 			this->create_subscription<px4_msgs::msg::VehicleLocalPosition>("/fmu/out/vehicle_local_position",
-				10,
+				qos,
 				[this](const px4_msgs::msg::VehicleLocalPosition::UniquePtr msg) {
-					X = msg->x;
-					Y = msg->y;
-					float Z = msg->z;
-					if(!start_trj && (p0_x + 1.0 > X && p0_x - 1.0 < X)&&(p0_y + 1.0 > Y && p0_y - 1.0 < Y)&&(p0_z + 1.0 > Z && p0_z - 1.0 < Z)){
-						start_trj = true;
-						std::cout << "start trj!" << std::endl;
+					RCLCPP_INFO(this->get_logger(), "Local pos: %.2f %.2f %.2f", msg->x, msg->y, msg->z);
+
+					if((waypoints[wpIndex][0] + threshold > msg->x && waypoints[wpIndex][0] - threshold < msg->x)
+					&& (waypoints[wpIndex][1] + threshold > msg->y && waypoints[wpIndex][1] - threshold < msg->y)) {
+
+						wpIndex++;
+
+						if (wpIndex >= waypoints.size()) {
+							exit(0);
+						}
+						RCLCPP_INFO(this->get_logger(), "Next waypoint: %.2f %.2f %.2f. Index: %d", 
+						waypoints[wpIndex][0], waypoints[wpIndex][1], waypoints[wpIndex][2], wpIndex);
 					}
 				}
 			);
@@ -61,39 +67,19 @@ public:
 		    if (offboard_setpoint_counter_ == 10) {
 			    // Change to Offboard mode after 10 setpoints
 			    this->publish_vehicle_command(VehicleCommand::VEHICLE_CMD_DO_SET_MODE, 1, 6);
-
+				
 			    // Arm the vehicle
 			    this->arm();
-
 		    }
-			// the spiral, in polar coordinates (theta, rho), is given by
-			// theta = theta_0 + omega*t
-			// rho = rho_0 + K*theta
-			float theta = theta_0 + omega * 0.1 * discrete_time_index;
-			float rho = rho_0 + K * theta;
-			
-			// from polar to cartesian coordinates
-			des_x = rho * cos(theta);
-			des_y = rho * sin(theta);
 
-			// velocity computation
-			float dot_rho = K*omega;
-			dot_des_x = dot_rho*cos(theta) - rho*sin(theta)*omega;
-			dot_des_y = dot_rho*sin(theta) + rho*cos(theta)*omega;
-			// desired heading direction
-			gamma = atan2(dot_des_y, dot_des_x);
+			publish_offboard_control_mode();
+			publish_trajectory_setpoint();
 
-        	// offboard_control_mode needs to be paired with trajectory_setpoint
-		    publish_offboard_control_mode();
-		    publish_trajectory_setpoint();
-
-       		     // stop the counter after reaching 11
+			// stop the counter after reaching 10
 		    if (offboard_setpoint_counter_ < 11) {
 			    offboard_setpoint_counter_++;
 		    }
-			if (start_trj){
-				discrete_time_index++;
-			}
+			
 	    };
 	    command_timer_ = this->create_wall_timer(100ms, send_commands_callback);
 	}
@@ -103,25 +89,46 @@ public:
 
 private:
 
-	bool start_trj = true;
+	uint8_t wpIndex = 0;
 
-	const float omega = 0.3; 	// angular speed of the POLAR trajectory
-	const float K = 2;			// [m] gain that regulates the spiral pitch
+	float threshold = 0.09;
 
-	
-	const float rho_0 = 2;
-	const float theta_0 = 0;
-	const float p0_z = -10.0;
-	float p0_x = rho_0*cos(theta_0);
-	float p0_y = rho_0*sin(theta_0);
-	float des_x = p0_x, des_y = p0_y, des_z = p0_z;
-	float dot_des_x = 0.0, dot_des_y = 0.0;
-	float gamma = M_PI_4;
-
-	float X;
-	float Y;
-    
-	uint32_t discrete_time_index = 0;
+	std::vector<std::vector<float>> waypoints = {
+		// Forward-backward x3
+		{0.0, 0.0, -1.5,},
+		{0.5, 0.0, -1.5,},
+		{0.0, 0.0, -1.5,},
+		{-0.5, 0.0, -1.5,},
+		{0.0, 0.0, -1.5,},
+		{0.0, 0.0, -1.5,},
+		{0.5, 0.0, -1.5,},
+		{0.0, 0.0, -1.5,},
+		{-0.5, 0.0, -1.5,},
+		{0.0, 0.0, -1.5,},
+		{0.0, 0.0, -1.5,},
+		{0.5, 0.0, -1.5,},
+		{0.0, 0.0, -1.5,},
+		{-0.5, 0.0, -1.5,},
+		{0.0, 0.0, -1.5,},
+		// Left-right x3
+		{0.0, 0.0, -1.5,},
+		{0.0, 0.5, -1.5,},
+		{0.0, 0.0, -1.5,},
+		{0.0, -0.5, -1.5,},
+		{0.0, 0.0, -1.5,},
+		{0.0, 0.0, -1.5,},
+		{0.0, 0.5, -1.5,},
+		{0.0, 0.0, -1.5,},
+		{0.0, -0.5, -1.5,},
+		{0.0, 0.0, -1.5,},
+		{0.0, 0.0, -1.5,},
+		{0.0, 0.5, -1.5,},
+		{0.0, 0.0, -1.5,},
+		{0.0, -0.5, -1.5,},
+		{0.0, 0.0, -1.5,},
+		// Land
+		{0.0, 0.0, 0.0}
+	};
 
 	rclcpp::TimerBase::SharedPtr command_timer_;
 
@@ -134,7 +141,7 @@ private:
 
 	std::atomic<uint64_t> timestamp_;   //!< common synced timestamped
 
-	uint64_t offboard_setpoint_counter_ = 0;   //!< counter for the number of setpoints sent
+	uint64_t offboard_setpoint_counter_;   //!< counter for the number of setpoints sent
 
 	void publish_offboard_control_mode();
 	void publish_trajectory_setpoint();
@@ -181,12 +188,12 @@ void OffboardCalibration::publish_trajectory_setpoint()
 {
 	TrajectorySetpoint msg{};
     msg.timestamp = timestamp_.load();
-    msg.position = {des_x, des_y, des_z};
-    msg.velocity = {dot_des_x, dot_des_y, 0.0};
-    msg.yaw = gamma;		//-3.14; // [-PI:PI]
+	msg.position = {waypoints[wpIndex][0], waypoints[wpIndex][1], waypoints[wpIndex][2]};
+    msg.velocity = {0.05, 0.05, 0.5};
+    msg.yaw = 0;		//-3.14; // [-PI:PI]
     trajectory_setpoint_publisher_->publish(msg);
 
-	RCLCPP_INFO(this->get_logger(), "Next waypoint: %.2f %.2f %.2f",des_x, des_y, des_z);
+	//RCLCPP_INFO(this->get_logger(), "Next waypoint: %.2f %.2f %.2f", waypoints[wpIndex][0], waypoints[wpIndex][1], waypoints[wpIndex][2]);
 }
 
 /**
