@@ -42,6 +42,8 @@ public:
 			});
 
 		offboard_setpoint_counter_ = 0;
+	
+		//this->publish_gps_global_origin(50.123456, 30.123456, 1.0);
 
 		subscription_ =
 			this->create_subscription<px4_msgs::msg::VehicleLocalPosition>("/fmu/out/vehicle_local_position",
@@ -146,6 +148,7 @@ private:
 	void publish_offboard_control_mode();
 	void publish_trajectory_setpoint();
 	void publish_vehicle_command(uint16_t command, float param1 = 0.0, float param2 = 0.0);
+	void publish_gps_global_origin(float lat = 0.0, float lon = 0.0, float alt = 0.0);
 };
 
 /**
@@ -208,6 +211,28 @@ void OffboardCalibration::publish_vehicle_command(uint16_t command, float param1
 	msg.param1 = param1;
 	msg.param2 = param2;
 	msg.command = command;
+	msg.target_system = 1;
+	msg.target_component = 1;
+	msg.source_system = 1;
+	msg.source_component = 1;
+	msg.from_external = true;
+	msg.timestamp = timestamp_.load();
+	vehicle_command_publisher_->publish(msg);
+}
+
+/**
+ * @brief Publish SET_GPS_GLOBAL_ORIGIN command
+ * @param lat    Latitude
+ * @param lon    Longitude
+ * @param alt    Altitude
+ */
+void OffboardCalibration::publish_gps_global_origin(float lat, float lon, float alt)
+{
+	VehicleCommand msg{};
+	msg.param5 = lat;
+	msg.param6 = lon;
+	msg.param7 = alt;
+	msg.command = VehicleCommand::VEHICLE_CMD_SET_GPS_GLOBAL_ORIGIN;
 	msg.target_system = 1;
 	msg.target_component = 1;
 	msg.source_system = 1;
