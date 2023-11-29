@@ -24,6 +24,7 @@ find_package(geometry_msgs REQUIRED)
 find_package(px4_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
 
 #################
 # Setup targets #
@@ -40,10 +41,16 @@ target_include_directories(frame_transforms PUBLIC
 )
 
 
-# examples/listeners/sensor_combined_listener
-add_executable(sensor_combined_imu_listener src/examples/listeners/sensor_combined_imu_listener.cpp)
-ament_target_dependencies(sensor_combined_imu_listener rclcpp px4_msgs sensor_msgs)
-install(TARGETS sensor_combined_imu_listener DESTINATION lib/${PROJECT_NAME})
+# examples/listeners/sensor_imu_remapper
+add_executable(sensor_imu_remapper src/examples/listeners/sensor_imu_remapper.cpp)
+ament_target_dependencies(sensor_imu_remapper rclcpp px4_msgs sensor_msgs)
+install(TARGETS sensor_imu_remapper DESTINATION lib/${PROJECT_NAME})
+
+# examples/listeners/pose_imu_remapper
+add_executable(pose_imu_remapper src/examples/listeners/pose_imu_remapper.cpp)
+ament_target_dependencies(pose_imu_remapper rclcpp px4_msgs tf2_geometry_msgs)
+target_link_libraries(pose_imu_remapper frame_transforms)
+install(TARGETS pose_imu_remapper DESTINATION lib/${PROJECT_NAME})
 
 # examples/listeners/vehicle_gps_position_listener
 add_executable(vehicle_gps_position_listener src/examples/listeners/vehicle_gps_position_listener.cpp)
